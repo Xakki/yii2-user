@@ -173,15 +173,24 @@ class Account extends ActiveRecord
     protected static function fetchAccount(BaseClientInterface $client)
     {
         $account = static::getFinder()->findAccount()->byClient($client)->one();
-
+        
+        $dataSave = [
+            'provider'   => $client->getId(),
+            'client_id'  => $client->getUserAttributes()['id'],
+            'data'       => Json::encode($client->getUserAttributes()),
+        ];
+        
+        if ($client instanceof ClientInterface) {
+            $dataSave['username']    = $client->getUsername();
+            $dataSave['email']       = $client->getEmail();
+        }
+        
         if (null === $account) {
-            $account = \Yii::createObject([
-                'class'      => static::className(),
-                'provider'   => $client->getId(),
-                'client_id'  => $client->getUserAttributes()['id'],
-                'data'       => Json::encode($client->getUserAttributes()),
-            ]);
+            $dataSave['class'] = tatic::className();
+            $account = \Yii::createObject($dataSave);
             $account->save(false);
+        } else {
+            $account->updateAttributes($dataSave);
         }
 
         return $account;
